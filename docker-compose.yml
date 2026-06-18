@@ -1,0 +1,39 @@
+# Lokal infrastruktur för utveckling: Postgres + Redis.
+# Starta med:  docker compose up -d
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: iae
+      POSTGRES_PASSWORD: iae
+      POSTGRES_DB: iae
+    ports:
+      # Sätt POSTGRES_PORT i .env om 5432 redan är upptagen på din maskin.
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U iae"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      # Sätt REDIS_PORT i .env om 6379 redan är upptagen på din maskin.
+      - "${REDIS_PORT:-6379}:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
+  redisdata:

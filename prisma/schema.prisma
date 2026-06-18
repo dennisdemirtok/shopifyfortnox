@@ -1,0 +1,122 @@
+// Prisma-schema för IAE Shopify -> Fortnox-integrationen.
+// Datasource: PostgreSQL (Railway i prod, docker-compose lokalt).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Fortnox OAuth-token. En rad per anslutning (tenant). Roterad refresh-token
+/// lagras atomiskt direkt vid varje refresh (Fortnox roterar vid varje användning).
+model OAuthToken {
+  id               String    @id @default(cuid())
+  provider         String    @default("fortnox")
+  tenant           String    @default("default")
+  accessToken      String
+  refreshToken     String
+  scope            String?
+  expiresAt        DateTime
+  refreshExpiresAt DateTime?
+  rotatedAt        DateTime  @default(now())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@unique([provider, tenant])
+}
+
+/// Flöde A: Shopify Company/CompanyLocation <-> Fortnox-kund.
+/// En CompanyLocation = en Fortnox-kund (per spec §4).
+model CustomerMapping {
+  id                    String   @id @default(cuid())
+  shopDomain            String
+  companyId             String // gid://shopify/Company/...
+  companyLocationId     String // gid://shopify/CompanyLocation/...
+  organisationNumber    String?
+  fortnoxCustomerNumber String
+  lastSyncedAt          DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@unique([shopDomain, companyLocationId])
+  @@index([organisationNumber])
+  @@index([fortnoxCustomerNumber])
+}
+
+/// Flöde B: Shopify-order <-> Fortnox-faktura, med state machine.
+/// fulfillmentId = "" betyder hel order (ej delleverans) så unik-nyckeln aldrig får NULL.
+model OrderMapping {
+  id                   String   @id @default(cuid())
+  shopDomain           String
+  shopifyOrderId       String // gid://shopify/Order/...
+  orderName            String? // t.ex. #1001 (skrivs till Fortnox ExternalInvoiceReference1)
+  fulfillmentId        String   @default("")
+  fortnoxOrderNumber   String?
+  fortnoxInvoiceNumber String?
+  state                String   @default("PENDING") // PENDING|ORDER_OK|INVOICE_OK|SENT|BOOKKEPT|FAILED
+  attempts             Int      @default(0)
+  lastError            String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([shopDomain, shopifyOrderId, fulfillmentId])
+  @@index([state])
+}
+
+/// Audit-logg per steg (samma mönster som övriga IAE-agenter).
+model AuditLog {
+  id         String   @id @default(cuid())
+  shopDomain String?
+  flow       String // "A" | "B" | "system"
+  entityType String // company_location | order | webhook | oauth
+  entityId   String?
+  step       String // customer.upsert | order.create | invoice.create | invoice.send | invoice.bookkeep ...
+  status     String // ok | error | skipped
+  message    String?
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([shopDomain, flow])
+  @@index([entityId])
+  @@index([createdAt])
+}
+
+/// Idempotens mot Shopifys webhook-retries (X-Shopify-Webhook-Id).
+model ProcessedWebhook {
+  id         String   @id @default(cuid())
+  webhookId  String   @unique
+  topic      String
+  shopDomain String?
+  receivedAt DateTime @default(now())
+}
+
+/// Konfiguration per storefront (spec §11). Ej hårdkodning.
+model StorefrontConfig {
+  id                String   @id @default(cuid())
+  shopDomain        String   @unique
+  market            String?
+  currency          String   @default("SEK")
+  b2bModel          String   @default("native") // native | tagged
+  pricesIncludeVat  Boolean  @default(false)
+  vatRegime         String   @default("inhemsk") // inhemsk | reverse-charge | export
+  shippingArticleNr String? // Fortnox-artikelnr för frakt (egen fraktartikel)
+  sendMethod        String   @default("email") // email | eprint
+  taggedB2bTag      String? // tagg-filter om b2bModel = tagged
+  paymentTermsMap   Json? // Shopify payment terms-mall -> Fortnox TermsOfPayment
+  accountMap        Json? // momsregim/scenario -> Fortnox försäljningskonto
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
+
+/// SKU -> Fortnox ArticleNumber, försynkat i batchjobb (spec §5). Okänd SKU = larm.
+model ArticleMapping {
+  id            String   @id @default(cuid())
+  sku           String   @unique
+  articleNumber String
+  description   String?
+  lastSyncedAt  DateTime @default(now())
+}
