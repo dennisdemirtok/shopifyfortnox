@@ -6,6 +6,7 @@ import {
   COMPANY_FOR_SYNC,
   COMPANY_LOCATION_FOR_SYNC,
   ORDER_FOR_INVOICING,
+  PRODUCTS_FOR_ARTICLE_SYNC,
   SET_COMPANY_EXTERNAL_ID,
 } from "./queries";
 import type { CompanyLocationNode, CompanyNode, OrderNode } from "./types";
@@ -73,6 +74,39 @@ export async function listAllCompanies(): Promise<CompanySummary[]> {
     out.push(...data.companies.nodes);
     if (!data.companies.pageInfo.hasNextPage) break;
     after = data.companies.pageInfo.endCursor;
+  }
+  return out;
+}
+
+// ── Produktsynk ───────────────────────────────────────────────────────────
+export interface ShopifyVariant {
+  id: string;
+  sku?: string | null;
+  title?: string | null;
+  price?: string | null;
+}
+export interface ShopifyProduct {
+  id: string;
+  title: string;
+  status: string;
+  variants: { nodes: ShopifyVariant[] };
+}
+
+/** Hämtar alla produkter med varianter (paginerat). */
+export async function listAllProducts(): Promise<ShopifyProduct[]> {
+  const out: ShopifyProduct[] = [];
+  let after: string | null = null;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const data: {
+      products: {
+        nodes: ShopifyProduct[];
+        pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      };
+    } = await shopifyGraphQL(PRODUCTS_FOR_ARTICLE_SYNC, { first: 50, after });
+    out.push(...data.products.nodes);
+    if (!data.products.pageInfo.hasNextPage) break;
+    after = data.products.pageInfo.endCursor;
   }
   return out;
 }

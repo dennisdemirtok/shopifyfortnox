@@ -104,6 +104,22 @@ mutation CompanyCreate($input: CompanyCreateInput!) {
   }
 }`;
 
+// Produktsynk: alla produkter + varianter (SKU) för push till Fortnox-artiklar.
+export const PRODUCTS_FOR_ARTICLE_SYNC = /* GraphQL */ `
+query ProductsForArticleSync($first: Int!, $after: String) {
+  products(first: $first, after: $after) {
+    nodes {
+      id
+      title
+      status
+      variants(first: 100) {
+        nodes { id sku title price }
+      }
+    }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
 // B2B-ansökan: riktad sökning för dubblettskydd (billigare än att lista alla).
 export const FIND_COMPANIES = /* GraphQL */ `
 query FindCompanies($query: String!) {

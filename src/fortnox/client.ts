@@ -256,6 +256,29 @@ export async function listArticles(page = 1, limit = 500): Promise<ArticlesList>
   });
 }
 
+/** Skapar en artikel i Fortnox (produktsynk Shopify → Fortnox). */
+export async function createArticle(payload: FortnoxArticle): Promise<FortnoxArticle> {
+  const data = await request<{ Article: FortnoxArticle }>({
+    method: "POST",
+    path: "/3/articles",
+    body: { Article: payload },
+  });
+  return data.Article;
+}
+
+/** Uppdaterar en befintlig artikel. */
+export async function updateArticle(
+  articleNumber: string,
+  payload: FortnoxArticle
+): Promise<FortnoxArticle> {
+  const data = await request<{ Article: FortnoxArticle }>({
+    method: "PUT",
+    path: `/3/articles/${encodeURIComponent(articleNumber)}`,
+    body: { Article: payload },
+  });
+  return data.Article;
+}
+
 export async function getArticle(articleNumber: string): Promise<FortnoxArticle | null> {
   try {
     const data = await request<{ Article: FortnoxArticle }>({
