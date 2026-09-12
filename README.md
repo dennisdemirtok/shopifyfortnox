@@ -131,8 +131,23 @@ Saknas raden används säkra defaults (SEK, inhemsk, email, exkl. moms).
 
 ## Samlingsfakturering (periodfaktura)
 
-Kunder som lägger många småordrar behöver inte en faktura per order. Sätt rytm
-per kund i adminvyn:
+Kunder som lägger många småordrar behöver inte en faktura per order.
+
+**Inget sker automatiskt** — alla kunder står som `per_order` tills du ändrar dem.
+
+### Var du styr det
+
+**I Shopify, på företagssidan:** Customers → Companies → öppna företaget → fältet
+**"Faktureringsrytm (Fortnox)"** under *Metafields*. Det är sanningen; integrationen
+läser fältet när ordern ska faktureras.
+
+Giltiga värden: `per_order`, `weekly`, `biweekly`, `monthly`.
+
+Fältet skapas av `npm run provision:invoice-field` (körs en gång; fyller även i
+`per_order` på alla befintliga företag så det aldrig står tomt).
+
+Det finns även en översiktsvy som visar parkerade ordrar per kund och låter dig
+fakturera i förtid — den skriver tillbaka till Shopify så bilderna hålls i synk:
 
 ```
 https://<domän>/admin/billing?token=<ADMIN_TOKEN>
