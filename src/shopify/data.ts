@@ -2,6 +2,7 @@ import { shopifyGraphQL } from "./graphql";
 import {
   COMPANIES_FOR_DEDUPE,
   COMPANY_CREATE,
+  FIND_COMPANIES,
   COMPANY_FOR_SYNC,
   COMPANY_LOCATION_FOR_SYNC,
   ORDER_FOR_INVOICING,
@@ -73,6 +74,15 @@ export async function listAllCompanies(): Promise<CompanySummary[]> {
     after = data.companies.pageInfo.endCursor;
   }
   return out;
+}
+
+/** Riktad sökning bland companies (dubblettskydd vid B2B-ansökan). */
+export async function findCompanies(query: string): Promise<CompanySummary[]> {
+  const data = await shopifyGraphQL<{ companies: { nodes: CompanySummary[] } }>(
+    FIND_COMPANIES,
+    { query }
+  );
+  return data.companies.nodes;
 }
 
 export interface CompanyCreatePayload {

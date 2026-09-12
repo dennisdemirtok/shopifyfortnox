@@ -73,6 +73,10 @@ const schema = z.object({
   SMTP_PASS: z.string().optional(),
 
   OAUTH_STATE_SECRET: z.string().min(8),
+
+  // B2B-ansökan: extra origins (kommaseparerat) som får posta till /b2b/apply.
+  // Butikens myshopify-domän tillåts alltid. Använd er publika domän här.
+  B2B_ALLOWED_ORIGINS: z.string().default(""),
 });
 
 const parsed = schema.safeParse(process.env);

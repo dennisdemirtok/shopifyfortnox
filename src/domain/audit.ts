@@ -3,7 +3,7 @@ import { logger } from "../lib/logger";
 
 export interface AuditInput {
   shopDomain?: string;
-  flow: "A" | "B" | "C" | "system";
+  flow: "A" | "B" | "C" | "D" | "system";
   entityType: string;
   entityId?: string;
   step: string;

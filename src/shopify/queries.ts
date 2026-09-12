@@ -104,6 +104,14 @@ mutation CompanyCreate($input: CompanyCreateInput!) {
   }
 }`;
 
+// B2B-ansökan: riktad sökning för dubblettskydd (billigare än att lista alla).
+export const FIND_COMPANIES = /* GraphQL */ `
+query FindCompanies($query: String!) {
+  companies(first: 5, query: $query) {
+    nodes { id name externalId }
+  }
+}`;
+
 // Flöde C (import): lista alla befintliga companies för dubblettskydd.
 export const COMPANIES_FOR_DEDUPE = /* GraphQL */ `
 query AllCompaniesForDedupe($first: Int!, $after: String) {
