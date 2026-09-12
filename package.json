@@ -18,7 +18,8 @@
     "db:push": "prisma db push",
     "provision:webhooks": "tsx src/scripts/provisionWebhooks.ts",
     "provision:list-webhooks": "tsx src/scripts/listWebhooks.ts",
-    "sync:articles": "tsx src/scripts/syncArticles.ts"
+    "sync:articles": "tsx src/scripts/syncArticles.ts",
+    "import:customers": "tsx src/scripts/importFortnoxCustomers.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

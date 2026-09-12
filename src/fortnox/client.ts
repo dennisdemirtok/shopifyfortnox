@@ -103,10 +103,28 @@ async function request<T>(opts: RequestOpts): Promise<T> {
 // ── Kunder ─────────────────────────────────────────────────────────────────
 interface CustomersList {
   Customers?: FortnoxCustomer[];
-  MetaInformation?: { "@TotalResources"?: number };
+  MetaInformation?: {
+    "@TotalResources"?: number;
+    "@TotalPages"?: number;
+    "@CurrentPage"?: number;
+  };
 }
 interface CustomerEnvelope {
   Customer: FortnoxCustomer;
+}
+
+/** Paginerad kundlista (Flöde C: import Fortnox → Shopify). OBS: listan
+ * innehåller bara ett fältsubset — hämta detaljer per kund via getCustomer(). */
+export async function listCustomers(
+  page = 1,
+  limit = 100,
+  filter?: "active" | "inactive"
+): Promise<CustomersList> {
+  return request<CustomersList>({
+    method: "GET",
+    path: "/3/customers",
+    query: { page, limit, ...(filter ? { filter } : {}) },
+  });
 }
 
 /**

@@ -1,5 +1,7 @@
 import { shopifyGraphQL } from "./graphql";
 import {
+  COMPANIES_FOR_DEDUPE,
+  COMPANY_CREATE,
   COMPANY_FOR_SYNC,
   COMPANY_LOCATION_FOR_SYNC,
   ORDER_FOR_INVOICING,
@@ -45,6 +47,53 @@ interface CompanyUpdateResult {
     company: { id: string; externalId: string | null } | null;
     userErrors: Array<{ field: string[] | null; message: string }>;
   };
+}
+
+// ── Flöde C: import Fortnox → Shopify ─────────────────────────────────────
+export interface CompanySummary {
+  id: string;
+  name?: string | null;
+  externalId?: string | null;
+}
+
+/** Hämtar ALLA companies (paginerat) — används som dubblettskydd vid import. */
+export async function listAllCompanies(): Promise<CompanySummary[]> {
+  const out: CompanySummary[] = [];
+  let after: string | null = null;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const data: {
+      companies: {
+        nodes: CompanySummary[];
+        pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      };
+    } = await shopifyGraphQL(COMPANIES_FOR_DEDUPE, { first: 250, after });
+    out.push(...data.companies.nodes);
+    if (!data.companies.pageInfo.hasNextPage) break;
+    after = data.companies.pageInfo.endCursor;
+  }
+  return out;
+}
+
+export interface CompanyCreatePayload {
+  company: {
+    id: string;
+    name?: string | null;
+    externalId?: string | null;
+    locations?: { nodes: Array<{ id: string }> } | null;
+  } | null;
+  userErrors: Array<{ field: string[] | null; message: string }>;
+}
+
+/** Skapar ett Company (+ location + ev. kontakt) via companyCreate. */
+export async function createCompany(
+  input: Record<string, unknown>
+): Promise<CompanyCreatePayload> {
+  const data = await shopifyGraphQL<{ companyCreate: CompanyCreatePayload }>(
+    COMPANY_CREATE,
+    { input }
+  );
+  return data.companyCreate;
 }
 
 /** Skriver tillbaka Fortnox CustomerNumber till Company.externalId. */

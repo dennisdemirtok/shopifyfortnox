@@ -90,6 +90,29 @@ query OrderForInvoicing($id: ID!) {
   }
 }`;
 
+// Flöde C (import): skapa Company + Location (+ ev. kontakt) från Fortnox-kund.
+export const COMPANY_CREATE = /* GraphQL */ `
+mutation CompanyCreate($input: CompanyCreateInput!) {
+  companyCreate(input: $input) {
+    company {
+      id
+      name
+      externalId
+      locations(first: 1) { nodes { id } }
+    }
+    userErrors { field message }
+  }
+}`;
+
+// Flöde C (import): lista alla befintliga companies för dubblettskydd.
+export const COMPANIES_FOR_DEDUPE = /* GraphQL */ `
+query AllCompaniesForDedupe($first: Int!, $after: String) {
+  companies(first: $first, after: $after) {
+    nodes { id name externalId }
+    pageInfo { hasNextPage endCursor }
+  }
+}`;
+
 // Provisionering: skapa webhook-prenumeration (HTTPS-leverans via uri).
 export const WEBHOOK_SUBSCRIPTION_CREATE = /* GraphQL */ `
 mutation WebhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSubscription: WebhookSubscriptionInput!) {
