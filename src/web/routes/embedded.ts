@@ -32,7 +32,7 @@ embeddedRouter.use("/app", (_req, res, next) => {
 async function loadBillingData() {
   const rows = (await prisma.customerMapping.findMany({
     where: { shopDomain: env.SHOPIFY_SHOP_DOMAIN },
-    orderBy: { fortnoxCustomerNumber: "asc" },
+    orderBy: [{ companyName: "asc" }, { fortnoxCustomerNumber: "asc" }],
   })) as BillingRow[];
   const pending = await prisma.orderMapping.groupBy({
     by: ["companyLocationId"],

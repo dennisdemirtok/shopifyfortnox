@@ -169,11 +169,13 @@ async function main() {
               shopDomain,
               companyId: known.id,
               companyLocationId: locId,
+              companyName: known.name ?? c.Name,
               organisationNumber: c.OrganisationNumber?.replace(/\s/g, "") ?? null,
               fortnoxCustomerNumber: nr,
             },
             update: {
               fortnoxCustomerNumber: nr,
+              companyName: known.name ?? c.Name,
               organisationNumber: c.OrganisationNumber?.replace(/\s/g, "") ?? null,
             },
           });
@@ -206,6 +208,7 @@ async function main() {
               shopDomain,
               companyId,
               companyLocationId: locationId,
+              companyName: c.Name,
               organisationNumber: c.OrganisationNumber?.replace(/\s/g, "") ?? null,
               fortnoxCustomerNumber: nr,
             },

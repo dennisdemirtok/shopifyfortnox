@@ -126,6 +126,7 @@ async function upsertLocationCustomer(
     shopDomain,
     companyId: company?.id ?? "",
     companyLocationId: loc.id,
+    companyName: companyName,
     organisationNumber: orgNr,
     fortnoxCustomerNumber: finalNr,
   });

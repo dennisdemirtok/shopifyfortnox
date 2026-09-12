@@ -15,6 +15,7 @@ export async function upsertCustomerMapping(params: {
   shopDomain: string;
   companyId: string;
   companyLocationId: string;
+  companyName?: string | null;
   organisationNumber?: string | null;
   fortnoxCustomerNumber: string;
 }) {
@@ -29,11 +30,13 @@ export async function upsertCustomerMapping(params: {
       shopDomain: params.shopDomain,
       companyId: params.companyId,
       companyLocationId: params.companyLocationId,
+      companyName: params.companyName ?? null,
       organisationNumber: params.organisationNumber ?? null,
       fortnoxCustomerNumber: params.fortnoxCustomerNumber,
     },
     update: {
       companyId: params.companyId,
+      ...(params.companyName ? { companyName: params.companyName } : {}),
       organisationNumber: params.organisationNumber ?? null,
       fortnoxCustomerNumber: params.fortnoxCustomerNumber,
       lastSyncedAt: new Date(),

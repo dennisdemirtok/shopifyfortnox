@@ -35,6 +35,7 @@ model CustomerMapping {
   shopDomain            String
   companyId             String // gid://shopify/Company/...
   companyLocationId     String // gid://shopify/CompanyLocation/...
+  companyName           String?
   organisationNumber    String?
   fortnoxCustomerNumber String
   /// Faktureringsrytm: per_order (default) | weekly | biweekly | monthly.

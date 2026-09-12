@@ -31,6 +31,7 @@ async function main() {
   let pushed = 0;
   let pulled = 0;
   let skipped = 0;
+  let named = 0;
 
   for (const c of companies) {
     if (!c.locationId) {
@@ -42,6 +43,15 @@ async function main() {
         shopDomain_companyLocationId: { shopDomain, companyLocationId: c.locationId },
       },
     });
+
+    // Passa på att fylla i företagsnamnet i mappningen (visas i översikten).
+    if (mapping && c.name && mapping.companyName !== c.name) {
+      await prisma.customerMapping.update({
+        where: { id: mapping.id },
+        data: { companyName: c.name },
+      });
+      named++;
+    }
 
     if (isValidMode(c.mode)) {
       // Shopify har ett värde → spegla ner till DB.
@@ -66,6 +76,7 @@ async function main() {
   logger.info("──────── SAMMANFATTNING ────────");
   logger.info(`Satta i Shopify:   ${pushed}`);
   logger.info(`Hämtade till DB:   ${pulled}`);
+  logger.info(`Namn ifyllda:      ${named}`);
   logger.info(`Utan location:     ${skipped}`);
   process.exit(0);
 }

@@ -5,6 +5,7 @@ export interface BillingRow {
   fortnoxCustomerNumber: string;
   companyId: string;
   companyLocationId: string;
+  companyName: string | null;
   organisationNumber: string | null;
   invoiceMode: string;
   lastConsolidatedAt: Date | null;
@@ -45,8 +46,14 @@ export function renderBillingView(o: BillingViewOptions): string {
         (m) =>
           `<option value="${m}" ${m === r.invoiceMode ? "selected" : ""}>${MODE_LABEL[m]}</option>`
       ).join("");
+      const meta = [
+        `kundnr ${r.fortnoxCustomerNumber}`,
+        r.organisationNumber ?? null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
       return `<tr>
-        <td><strong>${esc(r.fortnoxCustomerNumber)}</strong><br><span class="dim">${esc(r.organisationNumber ?? "—")}</span></td>
+        <td><strong>${esc(r.companyName ?? `Kund ${r.fortnoxCustomerNumber}`)}</strong><br><span class="dim">${esc(meta)}</span></td>
         <td>
           <form method="post" action="${esc(o.actionSet)}" class="inline">
             ${hiddenFields}
@@ -104,7 +111,7 @@ export function renderBillingView(o: BillingViewOptions): string {
 ${o.msg ? `<div class="msg">${esc(o.msg)}</div>` : ""}
 <p class="sum">${o.rows.length} kunder · ${totalPending} ordrar väntar på samlingsfaktura</p>
 <table>
-  <tr><th>Fortnox-kund</th><th>Rytm</th><th>Parkerade</th><th>Senast fakturerad</th><th></th></tr>
+  <tr><th>Kund</th><th>Rytm</th><th>Parkerade</th><th>Senast fakturerad</th><th></th></tr>
   ${body || `<tr><td colspan="5" class="dim">Inga kunder synkade ännu.</td></tr>`}
 </table>
 </div></body></html>`;

@@ -37,7 +37,7 @@ adminRouter.get("/admin/billing", async (req, res) => {
   const token = String(req.query.token ?? "");
   const rows = await prisma.customerMapping.findMany({
     where: { shopDomain: env.SHOPIFY_SHOP_DOMAIN },
-    orderBy: { fortnoxCustomerNumber: "asc" },
+    orderBy: [{ companyName: "asc" }, { fortnoxCustomerNumber: "asc" }],
   });
   const pending = await prisma.orderMapping.groupBy({
     by: ["companyLocationId"],
