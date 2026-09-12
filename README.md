@@ -146,8 +146,18 @@ Giltiga värden: `per_order`, `weekly`, `biweekly`, `monthly`.
 Fältet skapas av `npm run provision:invoice-field` (körs en gång; fyller även i
 `per_order` på alla befintliga företag så det aldrig står tomt).
 
-Det finns även en översiktsvy som visar parkerade ordrar per kund och låter dig
-fakturera i förtid — den skriver tillbaka till Shopify så bilderna hålls i synk:
+### Översikt inne i Shopify
+
+**Apps → IAE Fortnox Sync** i Shopify-admin. Där ser du alla kunder, hur många
+ordrar som ligger parkerade per kund, och kan trycka **"Fakturera nu"** för att
+klippa en period i förtid. Rytmen kan ändras därifrån också — den skrivs tillbaka
+till företagets metafält så bilderna aldrig glider isär.
+
+Åtkomsten styrs av **Shopifys personalkonton**: ser användaren appen i admin
+kommer hen in. Sidan verifierar Shopifys session-token (JWT signerad med appens
+client secret) och accepterar inga anrop utifrån.
+
+Samma vy finns även utanför Shopify som reserv (kräver `ADMIN_TOKEN`):
 
 ```
 https://<domän>/admin/billing?token=<ADMIN_TOKEN>
