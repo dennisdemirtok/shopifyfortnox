@@ -55,6 +55,7 @@ export interface CompanySummary {
   id: string;
   name?: string | null;
   externalId?: string | null;
+  locations?: { nodes: Array<{ id: string }> } | null;
 }
 
 /** Hämtar ALLA companies (paginerat) — används som dubblettskydd vid import. */

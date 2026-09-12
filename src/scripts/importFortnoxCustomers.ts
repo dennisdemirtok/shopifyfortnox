@@ -38,6 +38,7 @@ interface Stats {
   toCreate: number;
   created: number;
   alreadyExists: number;
+  mappingsRepaired: number;
   privateSkipped: number;
   failed: number;
 }
@@ -123,6 +124,7 @@ async function main() {
     toCreate: 0,
     created: 0,
     alreadyExists: 0,
+    mappingsRepaired: 0,
     privateSkipped: 0,
     failed: 0,
   };
@@ -153,8 +155,31 @@ async function main() {
       }
 
       const nameKey = (c.Name ?? "").trim().toLowerCase();
-      if (mappedNrs.has(nr) || byExternalId.has(nr) || (nameKey && byName.has(nameKey))) {
+      const known = byExternalId.get(nr) ?? (nameKey ? byName.get(nameKey) : undefined);
+      if (mappedNrs.has(nr) || known) {
         stats.alreadyExists++;
+        // Reparera lokal mapping-cache om den saknas (t.ex. efter DB-byte/deploy).
+        const locId = known?.locations?.nodes?.[0]?.id;
+        if (APPLY && known && locId && !mappedNrs.has(nr)) {
+          await prisma.customerMapping.upsert({
+            where: {
+              shopDomain_companyLocationId: { shopDomain, companyLocationId: locId },
+            },
+            create: {
+              shopDomain,
+              companyId: known.id,
+              companyLocationId: locId,
+              organisationNumber: c.OrganisationNumber?.replace(/\s/g, "") ?? null,
+              fortnoxCustomerNumber: nr,
+            },
+            update: {
+              fortnoxCustomerNumber: nr,
+              organisationNumber: c.OrganisationNumber?.replace(/\s/g, "") ?? null,
+            },
+          });
+          mappedNrs.add(nr);
+          stats.mappingsRepaired++;
+        }
         logger.info(`= finns redan i Shopify: ${label}`);
         continue;
       }
@@ -224,6 +249,7 @@ async function main() {
   logger.info("──────── SAMMANFATTNING ────────");
   logger.info(`Genomgångna:        ${stats.scanned}`);
   logger.info(`Fanns redan:        ${stats.alreadyExists}`);
+  if (APPLY) logger.info(`Mappningar lagade: ${stats.mappingsRepaired}`);
   logger.info(`Privatkunder över:  ${stats.privateSkipped}`);
   if (APPLY) {
     logger.info(`Skapade:            ${stats.created}`);

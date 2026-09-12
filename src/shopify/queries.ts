@@ -116,7 +116,12 @@ query FindCompanies($query: String!) {
 export const COMPANIES_FOR_DEDUPE = /* GraphQL */ `
 query AllCompaniesForDedupe($first: Int!, $after: String) {
   companies(first: $first, after: $after) {
-    nodes { id name externalId }
+    nodes {
+      id
+      name
+      externalId
+      locations(first: 1) { nodes { id } }
+    }
     pageInfo { hasNextPage endCursor }
   }
 }`;
