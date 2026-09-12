@@ -13,6 +13,7 @@ import { isEuCountry } from "../vat/matrix";
 import {
   ensureOrderMapping,
   findCustomerMappingByLocation,
+  findOrderMapping,
   patchOrderMapping,
 } from "../domain/mapping";
 import { isAtLeast } from "../domain/stateMachine";
@@ -147,14 +148,15 @@ async function buildOrderRows(
  */
 export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
   const fulfillmentId = job.fulfillmentId ?? "";
-  let mapping = await ensureOrderMapping({
-    shopDomain: job.shopDomain,
-    shopifyOrderId: job.orderGid,
-    fulfillmentId,
-    orderName: job.orderName,
-  });
+  // Slå bara UPP mappningen här (skapa den inte): DTC-ordrar ska inte lämna
+  // efter sig PENDING-rader som ser ut som fastnade B2B-ordrar.
+  const existing = await findOrderMapping(
+    job.shopDomain,
+    job.orderGid,
+    fulfillmentId
+  );
 
-  if (mapping.state === "BOOKKEPT") {
+  if (existing?.state === "BOOKKEPT") {
     await audit({
       shopDomain: job.shopDomain,
       flow: "B",
@@ -162,7 +164,7 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
       entityId: job.orderGid,
       step: "idempotent.skip",
       status: "skipped",
-      message: `Redan klar (faktura ${mapping.fortnoxInvoiceNumber})`,
+      message: `Redan klar (faktura ${existing.fortnoxInvoiceNumber})`,
     });
     return;
   }
@@ -194,6 +196,16 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
     });
     return;
   }
+
+  // Först här vet vi att det är en B2B-order — skapa/återanvänd mappningen.
+  let mapping =
+    existing ??
+    (await ensureOrderMapping({
+      shopDomain: job.shopDomain,
+      shopifyOrderId: job.orderGid,
+      fulfillmentId,
+      orderName: job.orderName,
+    }));
 
   const pc = o.purchasingEntity;
   // Slå upp Fortnox-kund: externalId (Company/Location) eller lokal mapping.
