@@ -135,6 +135,15 @@ mutation WebhookSubscriptionCreate($topic: WebhookSubscriptionTopic!, $webhookSu
   }
 }`;
 
+// Provisionering: ta bort en webhook-prenumeration (t.ex. inaktuell URL).
+export const WEBHOOK_SUBSCRIPTION_DELETE = /* GraphQL */ `
+mutation WebhookSubscriptionDelete($id: ID!) {
+  webhookSubscriptionDelete(id: $id) {
+    deletedWebhookSubscriptionId
+    userErrors { field message }
+  }
+}`;
+
 // Provisionering: lista befintliga webhook-prenumerationer.
 export const WEBHOOK_SUBSCRIPTIONS = /* GraphQL */ `
 query WebhookSubscriptions {

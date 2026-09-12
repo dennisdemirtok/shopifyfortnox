@@ -36,20 +36,32 @@ export function getQueue(): Queue {
   return queue;
 }
 
-export function enqueueCompany(data: CustomerCompanyJob) {
-  return getQueue().add("customer.company", data, {
-    jobId: `company:${data.companyGid}`,
-  });
+/**
+ * Jobb-id:t måste vara unikt PER HÄNDELSE, inte per entitet: BullMQ vägrar lägga
+ * till ett jobb vars id redan finns (även bland färdiga jobb), så ett id som
+ * `company:<gid>` skulle få alla framtida uppdateringar av samma bolag att tyst
+ * försvinna. Shopifys retries dedupliceras redan på X-Shopify-Webhook-Id i
+ * webhook-mottagaren (ProcessedWebhook), så vi använder det id:t här.
+ */
+const jobOpts = (kind: string, key: string, eventId?: string) =>
+  eventId ? { jobId: `${kind}:${eventId}` } : { jobId: `${kind}:${key}:${Date.now()}` };
+
+export function enqueueCompany(data: CustomerCompanyJob, eventId?: string) {
+  return getQueue().add("customer.company", data, jobOpts("company", data.companyGid, eventId));
 }
 
-export function enqueueCompanyLocation(data: CustomerLocationJob) {
-  return getQueue().add("customer.location", data, {
-    jobId: `location:${data.locationGid}`,
-  });
+export function enqueueCompanyLocation(data: CustomerLocationJob, eventId?: string) {
+  return getQueue().add(
+    "customer.location",
+    data,
+    jobOpts("location", data.locationGid, eventId)
+  );
 }
 
-export function enqueueOrderFulfilled(data: OrderFulfilledJob) {
-  return getQueue().add("order.fulfilled", data, {
-    jobId: `order:${data.orderGid}:${data.fulfillmentId ?? ""}`,
-  });
+export function enqueueOrderFulfilled(data: OrderFulfilledJob, eventId?: string) {
+  return getQueue().add(
+    "order.fulfilled",
+    data,
+    jobOpts("order", `${data.orderGid}:${data.fulfillmentId ?? ""}`, eventId)
+  );
 }

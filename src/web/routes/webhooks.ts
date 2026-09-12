@@ -50,23 +50,22 @@ webhookRouter.post(
         case "companies/create":
         case "companies/update": {
           const companyGid = payload.admin_graphql_api_id ?? ensureGid("Company", payload.id!);
-          await enqueueCompany({ shopDomain, companyGid });
+          await enqueueCompany({ shopDomain, companyGid }, webhookId);
           break;
         }
         case "company_locations/create":
         case "company_locations/update": {
           const locationGid =
             payload.admin_graphql_api_id ?? ensureGid("CompanyLocation", payload.id!);
-          await enqueueCompanyLocation({ shopDomain, locationGid });
+          await enqueueCompanyLocation({ shopDomain, locationGid }, webhookId);
           break;
         }
         case "orders/fulfilled": {
           const orderGid = payload.admin_graphql_api_id ?? ensureGid("Order", payload.id!);
-          await enqueueOrderFulfilled({
-            shopDomain,
-            orderGid,
-            orderName: payload.name,
-          });
+          await enqueueOrderFulfilled(
+            { shopDomain, orderGid, orderName: payload.name },
+            webhookId
+          );
           break;
         }
         default:

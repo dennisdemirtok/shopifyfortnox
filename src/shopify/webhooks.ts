@@ -1,5 +1,9 @@
 import { shopifyGraphQL } from "./graphql";
-import { WEBHOOK_SUBSCRIPTION_CREATE, WEBHOOK_SUBSCRIPTIONS } from "./queries";
+import {
+  WEBHOOK_SUBSCRIPTION_CREATE,
+  WEBHOOK_SUBSCRIPTION_DELETE,
+  WEBHOOK_SUBSCRIPTIONS,
+} from "./queries";
 
 /** GraphQL-enum-topics vi prenumererar på (spec §4 + §5). */
 export const WEBHOOK_TOPIC_ENUMS = [
@@ -49,4 +53,18 @@ interface WebhookListResult {
 export async function listWebhooks() {
   const data = await shopifyGraphQL<WebhookListResult>(WEBHOOK_SUBSCRIPTIONS);
   return data.webhookSubscriptions.nodes;
+}
+
+interface WebhookDeleteResult {
+  webhookSubscriptionDelete: {
+    deletedWebhookSubscriptionId: string | null;
+    userErrors: Array<{ field: string[] | null; message: string }>;
+  };
+}
+
+export async function deleteWebhook(id: string) {
+  const data = await shopifyGraphQL<WebhookDeleteResult>(WEBHOOK_SUBSCRIPTION_DELETE, {
+    id,
+  });
+  return data.webhookSubscriptionDelete;
 }
