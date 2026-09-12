@@ -4,6 +4,7 @@ import { logger } from "../lib/logger";
 import { env } from "../config/env";
 import { adminRouter } from "./routes/admin";
 import { b2bApplyRouter } from "./routes/b2bApply";
+import { embeddedRouter } from "./routes/embedded";
 import { healthRouter } from "./routes/health";
 import { oauthRouter } from "./routes/oauth";
 import { shopifyOauthRouter } from "./routes/shopifyOauth";
@@ -22,6 +23,7 @@ export function buildApp() {
   app.use(shopifyOauthRouter);
   app.use(b2bApplyRouter);
   app.use(adminRouter);
+  app.use(embeddedRouter);
   app.use(healthRouter);
 
   // 404
