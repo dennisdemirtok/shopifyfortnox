@@ -3,10 +3,14 @@
 Automatiserad B2B-kund- och fakturasynk mellan Shopify Plus (nativ B2B) och Fortnox.
 Bygger på tech-specen `techspec-shopify-fortnox`.
 
-Två frikopplade flöden:
+**Driftsatt:** `https://app-production-0956.up.railway.app` (Railway, projekt `shopify-fortnox`).
+
+Fyra flöden:
 
 - **Flöde A – Kundsynk.** `companies/*` & `company_locations/*` → upsert av Fortnox-kund (nyckel: org.nr), writeback av `CustomerNumber` till `Company.externalId`.
 - **Flöde B – Orderfakturering.** `orders/fulfilled` (B2B) → Fortnox-order → faktura → utskick (e-post/eprint) → bokför.
+- **Flöde C – Engångsimport.** `npm run import:customers` hämtar alla aktiva Fortnox-kunder och lägger upp dem som B2B-companies i Shopify (dry-run som standard, `--apply` för skarpt).
+- **Flöde D – B2B-ansökan.** Publikt formulär på `/b2b/apply` → skapar Company i Shopify → triggar Flöde A vidare till Fortnox. Nya ansökningar spärras med `checkoutToDraft` tills de godkänts manuellt.
 
 Webhook-mottagaren gör **inga** Fortnox-anrop synkront: verifierar HMAC, kvitterar 200, lägger i kö. All Fortnox-trafik sker i en worker bakom en global throttle (25 anrop/5 s, delad).
 
@@ -125,7 +129,29 @@ Saknas raden används säkra defaults (SEK, inhemsk, email, exkl. moms).
 
 ---
 
+## Godkänna en B2B-ansökan
+
+När någon ansökt via `/b2b/apply` skapas bolaget i Shopify men **spärrat**: alla
+ordrar går till utkast för granskning i stället för att bli skarpa fakturaordrar.
+Du får ett larm med uppgifterna. För att godkänna:
+
+1. Shopify-admin → **Customers → Companies** → öppna bolaget (noten visar ansökningsuppgifterna).
+2. Öppna locationen → stäng av **"Checkout to draft"** i buyer experience-inställningarna.
+3. Säkerställ att kontakten har orderrätt och rätt betalningsvillkor.
+
+Kunden finns redan i Fortnox (Flöde A körde vid skapandet), så fakturering fungerar direkt.
+
 ## Deploy till Railway
+
+**Nuvarande drift:** projekt `shopify-fortnox`, tjänster `app` + `Postgres` + `Redis`.
+Deploya om med `railway up` (kräver `railway login`). `npm start` kör
+`prisma migrate deploy` före serverstart, så migreringar sker automatiskt.
+
+Byter domänen måste tre saker pekas om: Fortnox redirect-URI, Shopify-appens
+Redirect URL (ny version i Dev Dashboard) och `npm run provision:webhooks`
+(städar automatiskt bort prenumerationer med gammal URL).
+
+### Förstagångsuppsättning
 
 1. Skapa projekt och lägg till **PostgreSQL** + **Redis** (Railway-plugins). De exponerar `DATABASE_URL` och `REDIS_URL`.
 2. Skapa **två** tjänster från detta repo:
