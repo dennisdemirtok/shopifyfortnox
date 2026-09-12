@@ -4,7 +4,8 @@ import { prisma } from "../../lib/prisma";
 import { logger } from "../../lib/logger";
 import { runConsolidation } from "../../flows/consolidatedInvoice";
 import { setCompanyInvoiceMode } from "../../shopify/data";
-import { INVOICE_MODES, MODE_LABEL, isValidMode } from "../../domain/billing";
+import { isValidMode } from "../../domain/billing";
+import { renderBillingView, type BillingRow } from "../views/billing";
 import { audit } from "../../domain/audit";
 
 /**
@@ -35,10 +36,10 @@ adminRouter.use("/admin", (req, res, next) => {
 
 adminRouter.get("/admin/billing", async (req, res) => {
   const token = String(req.query.token ?? "");
-  const rows = await prisma.customerMapping.findMany({
+  const rows = (await prisma.customerMapping.findMany({
     where: { shopDomain: env.SHOPIFY_SHOP_DOMAIN },
     orderBy: [{ companyName: "asc" }, { fortnoxCustomerNumber: "asc" }],
-  });
+  })) as BillingRow[];
   const pending = await prisma.orderMapping.groupBy({
     by: ["companyLocationId"],
     where: { shopDomain: env.SHOPIFY_SHOP_DOMAIN, state: "AWAITING_CONSOLIDATION" },
@@ -47,7 +48,16 @@ adminRouter.get("/admin/billing", async (req, res) => {
   const pendingBy = new Map(
     pending.map((p) => [p.companyLocationId ?? "", p._count._all])
   );
-  res.type("html").send(renderBilling(rows, pendingBy, token, req.query.msg as string));
+  res.type("html").send(
+    renderBillingView({
+      rows,
+      pendingBy,
+      hidden: { token },
+      actionSet: "/admin/billing",
+      actionRun: "/admin/billing/run",
+      msg: typeof req.query.msg === "string" ? req.query.msg : undefined,
+    })
+  );
 });
 
 adminRouter.post(
@@ -110,78 +120,3 @@ adminRouter.post(
     );
   }
 );
-
-const esc = (s: unknown) =>
-  String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-
-function renderBilling(
-  rows: Array<{
-    id: string;
-    fortnoxCustomerNumber: string;
-    companyLocationId: string;
-    organisationNumber: string | null;
-    invoiceMode: string;
-    lastConsolidatedAt: Date | null;
-  }>,
-  pendingBy: Map<string, number>,
-  token: string,
-  msg?: string
-): string {
-  const body = rows
-    .map((r) => {
-      const pending = pendingBy.get(r.companyLocationId) ?? 0;
-      const opts = INVOICE_MODES.map(
-        (m) =>
-          `<option value="${m}" ${m === r.invoiceMode ? "selected" : ""}>${MODE_LABEL[m]}</option>`
-      ).join("");
-      return `<tr>
-        <td><strong>${esc(r.fortnoxCustomerNumber)}</strong><br><span class="dim">${esc(r.organisationNumber ?? "—")}</span></td>
-        <td>
-          <form method="post" action="/admin/billing" class="inline">
-            <input type="hidden" name="token" value="${esc(token)}">
-            <input type="hidden" name="mappingId" value="${esc(r.id)}">
-            <select name="mode" onchange="this.form.submit()">${opts}</select>
-          </form>
-        </td>
-        <td class="num">${pending > 0 ? `<span class="badge">${pending}</span>` : "<span class='dim'>0</span>"}</td>
-        <td class="dim">${r.lastConsolidatedAt ? r.lastConsolidatedAt.toISOString().slice(0, 10) : "—"}</td>
-        <td>${
-          pending > 0
-            ? `<form method="post" action="/admin/billing/run" class="inline">
-                 <input type="hidden" name="token" value="${esc(token)}">
-                 <input type="hidden" name="locationId" value="${esc(r.companyLocationId)}">
-                 <button>Fakturera nu</button>
-               </form>`
-            : ""
-        }</td>
-      </tr>`;
-    })
-    .join("");
-
-  return `<!doctype html><html lang="sv"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1"><title>Faktureringsrytm</title>
-<style>
- :root{--bg:#f6f6f7;--card:#fff;--ink:#1a1a1a;--dim:#6b7177;--line:#d9dbde;--accent:#1a1a1a}
- @media(prefers-color-scheme:dark){:root{--bg:#151719;--card:#1e2124;--ink:#f2f3f4;--dim:#a4abb2;--line:#343a3f;--accent:#f2f3f4}}
- body{margin:0;padding:28px 16px;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
- .wrap{max-width:900px;margin:0 auto}
- h1{font-size:22px;margin:0 0 4px} p.lead{color:var(--dim);margin:0 0 18px}
- table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
- th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:middle}
- th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
- tr:last-child td{border-bottom:0}
- .dim{color:var(--dim)} .num{text-align:center}
- select,button{font:inherit;padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--ink)}
- button{cursor:pointer;background:var(--accent);color:var(--card);border:0;font-weight:600}
- .inline{display:inline} .badge{display:inline-block;min-width:22px;padding:2px 7px;border-radius:999px;background:#f59e0b;color:#1a1a1a;font-weight:700}
- .msg{margin:0 0 14px;padding:9px 12px;border-radius:8px;background:color-mix(in srgb,var(--accent) 10%,transparent)}
-</style></head><body><div class="wrap">
-<h1>Faktureringsrytm per kund</h1>
-<p class="lead">Kunder med annan rytm än "per order" får sina ordrar parkerade och sammanslagna till en faktura när perioden klipps.</p>
-${msg ? `<div class="msg">${esc(msg)}</div>` : ""}
-<table>
-  <tr><th>Fortnox-kund</th><th>Rytm</th><th>Parkerade</th><th>Senast fakturerad</th><th></th></tr>
-  ${body || `<tr><td colspan="5" class="dim">Inga kunder synkade ännu.</td></tr>`}
-</table>
-</div></body></html>`;
-}
