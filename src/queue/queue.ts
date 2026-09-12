@@ -43,8 +43,14 @@ export function getQueue(): Queue {
  * försvinna. Shopifys retries dedupliceras redan på X-Shopify-Webhook-Id i
  * webhook-mottagaren (ProcessedWebhook), så vi använder det id:t här.
  */
-const jobOpts = (kind: string, key: string, eventId?: string) =>
-  eventId ? { jobId: `${kind}:${eventId}` } : { jobId: `${kind}:${key}:${Date.now()}` };
+/** BullMQ förbjuder ":" i jobb-id (Shopify-GID:er är fulla av dem). */
+const clean = (s: string) => s.replace(/[^A-Za-z0-9_-]/g, "-");
+
+const jobOpts = (kind: string, key: string, eventId?: string) => ({
+  jobId: eventId
+    ? `${kind}-${clean(eventId)}`
+    : `${kind}-${clean(key)}-${Date.now()}`,
+});
 
 export function enqueueCompany(data: CustomerCompanyJob, eventId?: string) {
   return getQueue().add("customer.company", data, jobOpts("company", data.companyGid, eventId));
