@@ -3,6 +3,7 @@ import { bullConnection } from "../lib/redis";
 import { QUEUE_NAME } from "../queue/queue";
 import { syncCompany, syncCompanyLocation } from "../flows/customerSync";
 import { handleOrderFulfilled } from "../flows/orderInvoice";
+import { runConsolidation } from "../flows/consolidatedInvoice";
 import { audit } from "../domain/audit";
 import { alert } from "../notify/notifier";
 import { logger } from "../lib/logger";
@@ -21,6 +22,14 @@ async function process(job: Job): Promise<void> {
         orderName: data.orderName,
         fulfillmentId: data.fulfillmentId,
       });
+    case "invoice.consolidate": {
+      const res = await runConsolidation({ apply: true });
+      logger.info(
+        { ...res },
+        `Samlingsfakturering klar: ${res.invoiced} fakturor för ${res.ordersInvoiced} ordrar`
+      );
+      return;
+    }
     default:
       throw new Error(`Okänt jobbnamn: ${job.name}`);
   }

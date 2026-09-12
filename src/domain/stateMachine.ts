@@ -6,6 +6,7 @@
  */
 export const ORDER_STATES = [
   "PENDING",
+  "AWAITING_CONSOLIDATION",
   "ORDER_OK",
   "INVOICE_OK",
   "SENT",
@@ -17,6 +18,8 @@ export type OrderState = (typeof ORDER_STATES)[number];
 
 const RANK: Record<string, number> = {
   PENDING: 0,
+  // Parkerad i väntan på samlingsfaktura — inget Fortnox-steg är gjort ännu.
+  AWAITING_CONSOLIDATION: 0,
   ORDER_OK: 1,
   INVOICE_OK: 2,
   SENT: 3,

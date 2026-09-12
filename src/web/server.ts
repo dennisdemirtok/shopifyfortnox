@@ -2,6 +2,7 @@ import express from "express";
 import pinoHttp from "pino-http";
 import { logger } from "../lib/logger";
 import { env } from "../config/env";
+import { adminRouter } from "./routes/admin";
 import { b2bApplyRouter } from "./routes/b2bApply";
 import { healthRouter } from "./routes/health";
 import { oauthRouter } from "./routes/oauth";
@@ -20,6 +21,7 @@ export function buildApp() {
   app.use(oauthRouter);
   app.use(shopifyOauthRouter);
   app.use(b2bApplyRouter);
+  app.use(adminRouter);
   app.use(healthRouter);
 
   // 404

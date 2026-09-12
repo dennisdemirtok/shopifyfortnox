@@ -18,7 +18,11 @@ export interface OrderFulfilledJob {
   fulfillmentId?: string;
 }
 
-export type JobName = "customer.company" | "customer.location" | "order.fulfilled";
+export type JobName =
+  | "customer.company"
+  | "customer.location"
+  | "order.fulfilled"
+  | "invoice.consolidate";
 
 let queue: Queue | null = null;
 export function getQueue(): Queue {
@@ -69,5 +73,29 @@ export function enqueueOrderFulfilled(data: OrderFulfilledJob, eventId?: string)
     "order.fulfilled",
     data,
     jobOpts("order", `${data.orderGid}:${data.fulfillmentId ?? ""}`, eventId)
+  );
+}
+
+/**
+ * Schemalägger den dagliga samlingsfaktureringen (BullMQ repeatable).
+ * Körs varje dag kl. CONSOLIDATION_HOUR; jobbet avgör själv vilka kunder som
+ * har en period att klippa i dag.
+ */
+export async function scheduleConsolidation(hour: number) {
+  const queue = getQueue();
+  // Rensa bort ev. gammalt schema så en ändrad timme slår igenom.
+  for (const r of await queue.getRepeatableJobs()) {
+    if (r.name === "invoice.consolidate") {
+      await queue.removeRepeatableByKey(r.key);
+    }
+  }
+  await queue.add(
+    "invoice.consolidate",
+    {},
+    {
+      repeat: { pattern: `0 ${hour} * * *`, tz: "Europe/Stockholm" },
+      jobId: "consolidation-daily",
+      removeOnComplete: { count: 50 },
+    }
   );
 }

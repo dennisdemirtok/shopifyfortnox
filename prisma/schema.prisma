@@ -37,6 +37,10 @@ model CustomerMapping {
   companyLocationId     String // gid://shopify/CompanyLocation/...
   organisationNumber    String?
   fortnoxCustomerNumber String
+  /// Faktureringsrytm: per_order (default) | weekly | biweekly | monthly.
+  /// Allt utom per_order parkerar ordrar och slår ihop dem till EN faktura.
+  invoiceMode           String   @default("per_order")
+  lastConsolidatedAt    DateTime?
   lastSyncedAt          DateTime @default(now())
   createdAt             DateTime @default(now())
   updatedAt             DateTime @updatedAt
@@ -56,14 +60,19 @@ model OrderMapping {
   fulfillmentId        String   @default("")
   fortnoxOrderNumber   String?
   fortnoxInvoiceNumber String?
-  state                String   @default("PENDING") // PENDING|ORDER_OK|INVOICE_OK|SENT|BOOKKEPT|FAILED
+  state                String   @default("PENDING") // PENDING|ORDER_OK|INVOICE_OK|SENT|BOOKKEPT|FAILED|AWAITING_CONSOLIDATION
   attempts             Int      @default(0)
   lastError            String?
+  /// Sätts för samlingsfakturering: vilken kund/valuta ordern ska grupperas på.
+  companyLocationId     String?
+  fortnoxCustomerNumber String?
+  currency              String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@unique([shopDomain, shopifyOrderId, fulfillmentId])
   @@index([state])
+  @@index([shopDomain, state, companyLocationId])
 }
 
 /// Audit-logg per steg (samma mönster som övriga IAE-agenter).

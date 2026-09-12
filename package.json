@@ -21,7 +21,8 @@
     "provision:list-webhooks": "tsx src/scripts/listWebhooks.ts",
     "sync:articles": "tsx src/scripts/syncArticles.ts",
     "sync:products": "tsx src/scripts/syncProductsToFortnox.ts",
-    "import:customers": "tsx src/scripts/importFortnoxCustomers.ts"
+    "import:customers": "tsx src/scripts/importFortnoxCustomers.ts",
+    "invoice:consolidate": "tsx src/scripts/consolidateInvoices.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

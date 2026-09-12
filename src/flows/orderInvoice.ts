@@ -14,6 +14,7 @@ import {
   ensureOrderMapping,
   findCustomerMappingByLocation,
   findOrderMapping,
+  getInvoiceMode,
   patchOrderMapping,
 } from "../domain/mapping";
 import { isAtLeast } from "../domain/stateMachine";
@@ -57,9 +58,11 @@ async function resolveArticleNumber(sku: string): Promise<string | null> {
   return art?.ArticleNumber ?? null;
 }
 
-async function buildOrderRows(
+export async function buildOrderRows(
   o: OrderNode,
-  shopDomain: string
+  shopDomain: string,
+  /** Prefixas på varje radbeskrivning vid samlingsfaktura, t.ex. "#1042". */
+  rowPrefix?: string
 ): Promise<{ rows: FortnoxOrderRow[]; missing: string[]; freight?: number }> {
   const config = await getStorefrontConfig(shopDomain);
   const country =
@@ -96,7 +99,7 @@ async function buildOrderRows(
       "0";
     rows.push({
       ArticleNumber: articleNumber,
-      Description: li.title,
+      Description: rowPrefix ? `${rowPrefix} ${li.title}` : li.title,
       OrderedQuantity: li.quantity,
       DeliveredQuantity: li.quantity,
       Price: parseFloat(unitStr),
@@ -122,7 +125,7 @@ async function buildOrderRows(
     if (config.shippingArticleNr) {
       rows.push({
         ArticleNumber: config.shippingArticleNr,
-        Description: "Frakt",
+        Description: rowPrefix ? `${rowPrefix} Frakt` : "Frakt",
         OrderedQuantity: 1,
         DeliveredQuantity: 1,
         Price: shipping,
@@ -224,6 +227,29 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
       `Order ${o.name}: kunden (location ${pc.location.id}, ${pc.company.name}) finns inte i Fortnox. ` +
         `Flöde A ska ha skapat den. Auto-skapa görs EJ (spec §5/§8). Kör om kundsynk och därefter ordern.`
     );
+    return;
+  }
+
+  // Samlingsfakturering: parkera ordern i stället för att fakturera direkt.
+  // Ett schemalagt jobb slår ihop periodens ordrar till EN faktura.
+  const invoiceMode = await getInvoiceMode(job.shopDomain, pc.location.id);
+  if (invoiceMode !== "per_order" && !isAtLeast(mapping.state, "ORDER_OK")) {
+    await patchOrderMapping(mapping.id, {
+      state: "AWAITING_CONSOLIDATION",
+      companyLocationId: pc.location.id,
+      fortnoxCustomerNumber: custNr,
+      currency: o.currencyCode,
+      lastError: null,
+    });
+    await audit({
+      shopDomain: job.shopDomain,
+      flow: "B",
+      entityType: "order",
+      entityId: job.orderGid,
+      step: "consolidation.parked",
+      status: "ok",
+      message: `${o.name} parkerad för samlingsfaktura (${invoiceMode}), kund ${custNr}`,
+    });
     return;
   }
 

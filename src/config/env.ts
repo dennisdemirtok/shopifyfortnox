@@ -77,6 +77,15 @@ const schema = z.object({
   // B2B-ansökan: extra origins (kommaseparerat) som får posta till /b2b/apply.
   // Butikens myshopify-domän tillåts alltid. Använd er publika domän här.
   B2B_ALLOWED_ORIGINS: z.string().default(""),
+
+  // Samlingsfakturering: vilken veckodag perioden klipps (1=mån … 7=sön)
+  // och vilken timme det schemalagda jobbet kör.
+  CONSOLIDATION_WEEKDAY: z.coerce.number().int().min(1).max(7).default(1),
+  CONSOLIDATION_HOUR: z.coerce.number().int().min(0).max(23).default(6),
+  CONSOLIDATION_ENABLED: bool(true),
+
+  // Skyddar /admin (faktureringsrytm per kund). Tomt = admin-sidan avstängd.
+  ADMIN_TOKEN: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

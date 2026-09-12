@@ -90,6 +90,9 @@ export async function patchOrderMapping(
     fortnoxInvoiceNumber?: string;
     lastError?: string | null;
     incrementAttempts?: boolean;
+    companyLocationId?: string;
+    fortnoxCustomerNumber?: string;
+    currency?: string;
   }
 ) {
   return prisma.orderMapping.update({
@@ -102,8 +105,25 @@ export async function patchOrderMapping(
         : {}),
       ...(patch.lastError !== undefined ? { lastError: patch.lastError } : {}),
       ...(patch.incrementAttempts ? { attempts: { increment: 1 } } : {}),
+      ...(patch.companyLocationId ? { companyLocationId: patch.companyLocationId } : {}),
+      ...(patch.fortnoxCustomerNumber
+        ? { fortnoxCustomerNumber: patch.fortnoxCustomerNumber }
+        : {}),
+      ...(patch.currency ? { currency: patch.currency } : {}),
     },
   });
+}
+
+/** Faktureringsrytm för en kund (CompanyLocation). Default: per order. */
+export async function getInvoiceMode(
+  shopDomain: string,
+  companyLocationId: string
+): Promise<string> {
+  const m = await prisma.customerMapping.findUnique({
+    where: { shopDomain_companyLocationId: { shopDomain, companyLocationId } },
+    select: { invoiceMode: true },
+  });
+  return m?.invoiceMode ?? "per_order";
 }
 
 // ── Webhook-idempotens ─────────────────────────────────────────────────────
