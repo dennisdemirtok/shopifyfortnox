@@ -58,18 +58,24 @@ function buildCompanyInput(c: FortnoxCustomer, withContact: boolean) {
     companyLocation: {
       name: c.City?.trim() || "Huvudkontor",
       ...(orgNr ? { taxRegistrationId: orgNr } : {}),
-      billingSameAsShipping: true,
-      // OBS: billingSameAsShipping=true => billingAddress ignoreras, så adressen
-      // skickas som shippingAddress (blir både leverans- och fakturaadress).
-      shippingAddress: {
-        address1: c.Address1 ?? undefined,
-        address2: c.Address2 ?? undefined,
-        city: c.City ?? undefined,
-        zip: c.ZipCode ?? undefined,
-        countryCode: country,
-        recipient: c.Name,
-        // Telefon utelämnas medvetet: Shopify kräver E.164 och Fortnox har fritext.
-      },
+      // Shopify kräver address1 om en adress skickas — kunder utan gatuadress i
+      // Fortnox får en location utan adress (kompletteras manuellt/vid Flöde A).
+      ...(c.Address1?.trim()
+        ? {
+            billingSameAsShipping: true,
+            // billingSameAsShipping=true => billingAddress ignoreras, så adressen
+            // skickas som shippingAddress (blir både leverans- och fakturaadress).
+            shippingAddress: {
+              address1: c.Address1,
+              address2: c.Address2 ?? undefined,
+              city: c.City ?? undefined,
+              zip: c.ZipCode ?? undefined,
+              countryCode: country,
+              recipient: c.Name,
+              // Telefon utelämnas medvetet: Shopify kräver E.164, Fortnox har fritext.
+            },
+          }
+        : {}),
     },
   };
 }

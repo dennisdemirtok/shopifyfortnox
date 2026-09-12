@@ -37,6 +37,9 @@ const schema = z.object({
     .default("https://apps.fortnox.se/oauth-v1"),
   FORTNOX_RATE_MAX: z.coerce.number().int().positive().default(25),
   FORTNOX_RATE_WINDOW_MS: z.coerce.number().int().positive().default(5000),
+  // "service" (spec §6, kräver att godkännaren är systemadministratör i Fortnox)
+  // eller "user" (token knyts till den godkännande användaren).
+  FORTNOX_ACCOUNT_TYPE: z.enum(["service", "user"]).default("service"),
 
   // Shopify
   SHOPIFY_SHOP_DOMAIN: z.string().min(1),

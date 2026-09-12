@@ -46,8 +46,13 @@ export function buildAuthorizeUrl(state: string): string {
     state,
     access_type: "offline",
     response_type: "code",
-    account_type: "service", // maskin-till-maskin (spec §6)
   });
+  // Servicekonto (spec §6) kräver att godkännaren är systemadministratör i
+  // Fortnox-bolaget. FORTNOX_ACCOUNT_TYPE=user auktoriserar som vanlig
+  // användare (fallback tills admin-rätt finns).
+  if (env.FORTNOX_ACCOUNT_TYPE === "service") {
+    params.set("account_type", "service");
+  }
   return `${AUTH_URL}?${params.toString()}`;
 }
 
