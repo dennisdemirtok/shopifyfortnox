@@ -9,7 +9,7 @@ Fyra flöden:
 
 - **Flöde A – Kundsynk.** `companies/*` & `company_locations/*` → upsert av Fortnox-kund (nyckel: org.nr), writeback av `CustomerNumber` till `Company.externalId`.
 - **Flöde B – Orderfakturering.** `orders/fulfilled` (B2B) → Fortnox-order → faktura → utskick (e-post/eprint) → bokför.
-- **Flöde C – Engångsimport.** `npm run import:customers` hämtar alla aktiva Fortnox-kunder och lägger upp dem som B2B-companies i Shopify (dry-run som standard, `--apply` för skarpt).
+- **Flöde C – Import & produktsynk.** `npm run import:customers` hämtar alla aktiva Fortnox-kunder och lägger upp dem som B2B-companies i Shopify. `npm run sync:products` speglar Shopify-varianter (SKU) som artiklar i Fortnox så fakturering inte stoppar på okänd SKU. Båda är dry-run som standard, `--apply` för skarpt.
 - **Flöde D – B2B-ansökan.** Publikt formulär på `/b2b/apply` → skapar Company i Shopify → triggar Flöde A vidare till Fortnox. Nya ansökningar spärras med `checkoutToDraft` tills de godkänts manuellt.
 
 Webhook-mottagaren gör **inga** Fortnox-anrop synkront: verifierar HMAC, kvitterar 200, lägger i kö. All Fortnox-trafik sker i en worker bakom en global throttle (25 anrop/5 s, delad).
@@ -128,6 +128,40 @@ Seeda sedan `StorefrontConfig` (en rad per storefront) med t.ex. Prisma Studio (
 Saknas raden används säkra defaults (SEK, inhemsk, email, exkl. moms).
 
 ---
+
+## Samlingsfakturering (periodfaktura)
+
+Kunder som lägger många småordrar behöver inte en faktura per order. Sätt rytm
+per kund i adminvyn:
+
+```
+https://<domän>/admin/billing?token=<ADMIN_TOKEN>
+```
+
+| Rytm | Innebörd |
+|------|----------|
+| `per order` | Faktura direkt vid leverans (default) |
+| `varje vecka` | Alla ordrar under veckan → en faktura |
+| `varannan vecka` | Samma, men jämna ISO-veckor |
+| `varje månad` | Alla ordrar under månaden → en faktura |
+
+Ordrar från kunder med periodrytm **parkeras** (`AWAITING_CONSOLIDATION`) i
+stället för att faktureras. Ett schemalagt jobb körs dagligen kl.
+`CONSOLIDATION_HOUR` och klipper de perioder som är mogna
+(`CONSOLIDATION_WEEKDAY`, default måndag). Då skapas **en** Fortnox-order med
+alla rader → **en** faktura, där varje rad är märkt med sitt Shopify-ordernummer.
+
+Adminvyn visar antal parkerade ordrar per kund och har en **"Fakturera nu"**-knapp
+för att klippa i förtid. Samma sak från terminalen:
+
+```bash
+npm run invoice:consolidate                  # torrkörning, bara mogna perioder
+npm run invoice:consolidate -- --apply --force   # fakturera allt parkerat nu
+```
+
+Säkerhetsspärrar: ordrar grupperas per kund **och valuta**, och en samlingsfaktura
+blockeras med larm om någon SKU saknas i Fortnox eller om ordrarna har olika
+inkl./exkl. moms — ordrarna ligger då kvar parkerade tills felet är löst.
 
 ## Godkänna en B2B-ansökan
 
