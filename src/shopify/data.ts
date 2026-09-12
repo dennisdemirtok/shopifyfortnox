@@ -78,6 +78,124 @@ export async function listAllCompanies(): Promise<CompanySummary[]> {
   return out;
 }
 
+// ── Faktureringsrytm som metafält på Company ──────────────────────────────
+import {
+  METAFIELD_KEY,
+  METAFIELD_NAMESPACE,
+  MODE_LABEL,
+  INVOICE_MODES,
+} from "../domain/billing";
+import {
+  COMPANY_INVOICE_MODES,
+  METAFIELD_DEFINITION_CREATE,
+  METAFIELDS_SET,
+} from "./queries";
+
+/**
+ * Skapar metafältsdefinitionen så att "Faktureringsrytm" dyker upp som en
+ * dropdown på företagssidan i Shopify-admin. Idempotent: en redan befintlig
+ * definition rapporteras som "fanns redan".
+ */
+export async function createInvoiceModeDefinition(): Promise<{
+  created: boolean;
+  message: string;
+}> {
+  const data = await shopifyGraphQL<{
+    metafieldDefinitionCreate: {
+      createdDefinition: { id: string } | null;
+      userErrors: Array<{ field: string[] | null; message: string; code?: string }>;
+    };
+  }>(METAFIELD_DEFINITION_CREATE, {
+    definition: {
+      name: "Faktureringsrytm (Fortnox)",
+      namespace: METAFIELD_NAMESPACE,
+      key: METAFIELD_KEY,
+      description:
+        "Styr om kunden faktureras per order eller får en samlingsfaktura per period.",
+      type: "single_line_text_field",
+      ownerType: "COMPANY",
+      pin: true,
+      validations: [
+        { name: "choices", value: JSON.stringify(INVOICE_MODES) },
+      ],
+    },
+  });
+  const errs = data.metafieldDefinitionCreate.userErrors ?? [];
+  if (errs.length > 0) {
+    const taken = errs.some((e) => (e.code ?? "").includes("TAKEN"));
+    if (taken) return { created: false, message: "Definitionen fanns redan." };
+    throw new Error(errs.map((e) => e.message).join("; "));
+  }
+  return { created: true, message: "Definitionen skapad." };
+}
+
+/** Sätter faktureringsrytmen på ett företag (Shopify är sanningen). */
+export async function setCompanyInvoiceMode(
+  companyId: string,
+  mode: string
+): Promise<void> {
+  const data = await shopifyGraphQL<{
+    metafieldsSet: {
+      userErrors: Array<{ field: string[] | null; message: string }>;
+    };
+  }>(METAFIELDS_SET, {
+    metafields: [
+      {
+        ownerId: companyId,
+        namespace: METAFIELD_NAMESPACE,
+        key: METAFIELD_KEY,
+        type: "single_line_text_field",
+        value: mode,
+      },
+    ],
+  });
+  const errs = data.metafieldsSet.userErrors ?? [];
+  if (errs.length > 0) throw new Error(errs.map((e) => e.message).join("; "));
+}
+
+export interface CompanyMode {
+  id: string;
+  name?: string | null;
+  externalId?: string | null;
+  mode?: string | null;
+  locationId?: string;
+}
+
+/** Läser alla företags faktureringsrytm (för spegling till vår DB). */
+export async function listCompanyInvoiceModes(): Promise<CompanyMode[]> {
+  const out: CompanyMode[] = [];
+  let after: string | null = null;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    const data: {
+      companies: {
+        nodes: Array<{
+          id: string;
+          name?: string | null;
+          externalId?: string | null;
+          metafield?: { value?: string | null } | null;
+          locations?: { nodes: Array<{ id: string }> } | null;
+        }>;
+        pageInfo: { hasNextPage: boolean; endCursor: string | null };
+      };
+    } = await shopifyGraphQL(COMPANY_INVOICE_MODES, { first: 100, after });
+    for (const n of data.companies.nodes) {
+      out.push({
+        id: n.id,
+        name: n.name,
+        externalId: n.externalId,
+        mode: n.metafield?.value ?? null,
+        locationId: n.locations?.nodes?.[0]?.id,
+      });
+    }
+    if (!data.companies.pageInfo.hasNextPage) break;
+    after = data.companies.pageInfo.endCursor;
+  }
+  return out;
+}
+
+export { MODE_LABEL };
+
 // ── Produktsynk ───────────────────────────────────────────────────────────
 export interface ShopifyVariant {
   id: string;

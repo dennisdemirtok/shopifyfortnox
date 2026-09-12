@@ -10,6 +10,7 @@ import {
 } from "../fortnox/client";
 import type { FortnoxOrderRow } from "../fortnox/types";
 import { isEuCountry } from "../vat/matrix";
+import { INVOICE_MODES } from "../domain/billing";
 import {
   ensureOrderMapping,
   findCustomerMappingByLocation,
@@ -232,7 +233,13 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
 
   // Samlingsfakturering: parkera ordern i stället för att fakturera direkt.
   // Ett schemalagt jobb slår ihop periodens ordrar till EN faktura.
-  const invoiceMode = await getInvoiceMode(job.shopDomain, pc.location.id);
+  // Sanningen är metafältet på företaget i Shopify (custom.fortnox_invoice_mode);
+  // vår DB används bara som reserv om fältet inte är satt.
+  const fromShopify = pc.company.metafield?.value?.trim();
+  const invoiceMode =
+    fromShopify && INVOICE_MODES.includes(fromShopify as never)
+      ? fromShopify
+      : await getInvoiceMode(job.shopDomain, pc.location.id);
   if (invoiceMode !== "per_order" && !isAtLeast(mapping.state, "ORDER_OK")) {
     await patchOrderMapping(mapping.id, {
       state: "AWAITING_CONSOLIDATION",

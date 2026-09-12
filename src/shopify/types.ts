@@ -80,7 +80,13 @@ export interface OrderLineItemNode {
 
 export interface PurchasingCompany {
   __typename: "PurchasingCompany";
-  company: { id: string; name?: string | null; externalId?: string | null };
+  company: {
+    id: string;
+    name?: string | null;
+    externalId?: string | null;
+    /** custom.fortnox_invoice_mode — styr samlingsfakturering, satt i Shopify-admin. */
+    metafield?: { value?: string | null } | null;
+  };
   location: { id: string; name?: string | null; externalId?: string | null };
 }
 

@@ -15,6 +15,7 @@ import { patchOrderMapping } from "../domain/mapping";
 import { audit } from "../domain/audit";
 import { alert } from "../notify/notifier";
 import { buildOrderRows } from "./orderInvoice";
+import { isCutDay } from "../domain/billing";
 
 /**
  * Samlingsfakturering: slår ihop en kunds parkerade ordrar till EN Fortnox-order
@@ -24,39 +25,6 @@ import { buildOrderRows } from "./orderInvoice";
  * Ordrar parkeras av Flöde B (state AWAITING_CONSOLIDATION) när kundens
  * invoiceMode är weekly/biweekly/monthly.
  */
-
-export type InvoiceMode = "per_order" | "weekly" | "biweekly" | "monthly";
-
-export const INVOICE_MODES: InvoiceMode[] = [
-  "per_order",
-  "weekly",
-  "biweekly",
-  "monthly",
-];
-
-/** ISO-veckonummer (för varannan-vecka-rytmen). */
-function isoWeek(d: Date): number {
-  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-  const day = t.getUTCDay() || 7;
-  t.setUTCDate(t.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(t.getUTCFullYear(), 0, 1));
-  return Math.ceil(((t.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
-}
-
-/** Är det dags att klippa fakturan för den här rytmen i dag? */
-export function isCutDay(mode: string, now = new Date()): boolean {
-  const weekday = now.getDay() === 0 ? 7 : now.getDay(); // 1=mån … 7=sön
-  switch (mode) {
-    case "weekly":
-      return weekday === env.CONSOLIDATION_WEEKDAY;
-    case "biweekly":
-      return weekday === env.CONSOLIDATION_WEEKDAY && isoWeek(now) % 2 === 0;
-    case "monthly":
-      return now.getDate() === 1;
-    default:
-      return false;
-  }
-}
 
 export interface ConsolidationResult {
   groups: number;

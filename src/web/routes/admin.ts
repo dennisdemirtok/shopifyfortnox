@@ -2,7 +2,9 @@ import { Router, urlencoded } from "express";
 import { env } from "../../config/env";
 import { prisma } from "../../lib/prisma";
 import { logger } from "../../lib/logger";
-import { INVOICE_MODES, runConsolidation } from "../../flows/consolidatedInvoice";
+import { runConsolidation } from "../../flows/consolidatedInvoice";
+import { setCompanyInvoiceMode } from "../../shopify/data";
+import { INVOICE_MODES, MODE_LABEL, isValidMode } from "../../domain/billing";
 import { audit } from "../../domain/audit";
 
 /**
@@ -13,13 +15,6 @@ import { audit } from "../../domain/audit";
  * exponerar hellre ingenting än en oskyddad vy över kunddata.
  */
 export const adminRouter = Router();
-
-const MODE_LABEL: Record<string, string> = {
-  per_order: "Per order (faktura direkt)",
-  weekly: "Varje vecka",
-  biweekly: "Varannan vecka",
-  monthly: "Varje månad",
-};
 
 function authed(token: unknown): boolean {
   if (!env.ADMIN_TOKEN) return false;
@@ -62,13 +57,22 @@ adminRouter.post(
     const body = req.body as Record<string, string>;
     const token = body.token ?? "";
     const { mappingId, mode } = body;
-    if (!mappingId || !INVOICE_MODES.includes(mode as never)) {
+    if (!mappingId || !isValidMode(mode)) {
       return res.redirect(303, `/admin/billing?token=${encodeURIComponent(token)}&msg=fel`);
     }
     const updated = await prisma.customerMapping.update({
       where: { id: mappingId },
       data: { invoiceMode: mode },
     });
+    // Shopify är sanningen — skriv metafältet så att företagssidan i admin stämmer.
+    try {
+      await setCompanyInvoiceMode(updated.companyId, mode!);
+    } catch (err) {
+      logger.error(
+        { err, company: updated.companyId },
+        "Kunde inte skriva faktureringsrytm till Shopify (lokalt värde sparat)"
+      );
+    }
     await audit({
       shopDomain: env.SHOPIFY_SHOP_DOMAIN,
       flow: "system",

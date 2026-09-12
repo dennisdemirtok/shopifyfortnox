@@ -68,7 +68,12 @@ query OrderForInvoicing($id: ID!) {
     purchasingEntity {
       __typename
       ... on PurchasingCompany {
-        company { id name externalId }
+        company {
+          id
+          name
+          externalId
+          metafield(namespace: "custom", key: "fortnox_invoice_mode") { value }
+        }
         location { id name externalId }
       }
     }
@@ -101,6 +106,39 @@ mutation CompanyCreate($input: CompanyCreateInput!) {
       locations(first: 1) { nodes { id } }
     }
     userErrors { field message }
+  }
+}`;
+
+// Faktureringsrytm: metafältdefinition på Company (ger dropdown i Shopify-admin).
+export const METAFIELD_DEFINITION_CREATE = /* GraphQL */ `
+mutation CreateInvoiceModeDefinition($definition: MetafieldDefinitionInput!) {
+  metafieldDefinitionCreate(definition: $definition) {
+    createdDefinition { id name key namespace }
+    userErrors { field message code }
+  }
+}`;
+
+// Faktureringsrytm: skriv värdet på ett företag.
+export const METAFIELDS_SET = /* GraphQL */ `
+mutation SetInvoiceMode($metafields: [MetafieldsSetInput!]!) {
+  metafieldsSet(metafields: $metafields) {
+    metafields { id key namespace value }
+    userErrors { field message code }
+  }
+}`;
+
+// Faktureringsrytm: läs alla företags nuvarande värde (för adminvy/spegling).
+export const COMPANY_INVOICE_MODES = /* GraphQL */ `
+query CompanyInvoiceModes($first: Int!, $after: String) {
+  companies(first: $first, after: $after) {
+    nodes {
+      id
+      name
+      externalId
+      metafield(namespace: "custom", key: "fortnox_invoice_mode") { value }
+      locations(first: 1) { nodes { id } }
+    }
+    pageInfo { hasNextPage endCursor }
   }
 }`;
 

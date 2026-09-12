@@ -22,7 +22,8 @@
     "sync:articles": "tsx src/scripts/syncArticles.ts",
     "sync:products": "tsx src/scripts/syncProductsToFortnox.ts",
     "import:customers": "tsx src/scripts/importFortnoxCustomers.ts",
-    "invoice:consolidate": "tsx src/scripts/consolidateInvoices.ts"
+    "invoice:consolidate": "tsx src/scripts/consolidateInvoices.ts",
+    "provision:invoice-field": "tsx src/scripts/provisionInvoiceModeField.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",
