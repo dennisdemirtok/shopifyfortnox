@@ -9,9 +9,15 @@ import { listArticles, listTermsOfPayments } from "../fortnox/client";
  */
 async function main() {
   logger.info("── Betalningsvillkor i Fortnox ──");
-  const terms = await listTermsOfPayments();
-  if (terms.length === 0) logger.info("(inga upplagda)");
-  for (const t of terms) logger.info(`  ${t.Code}  —  ${t.Description ?? ""}`);
+  try {
+    const terms = await listTermsOfPayments();
+    if (terms.length === 0) logger.info("(inga upplagda)");
+    for (const t of terms) logger.info(`  ${t.Code}  —  ${t.Description ?? ""}`);
+  } catch (err) {
+    // Kräver "settings"-scope som vi medvetet inte begär — villkoren ligger ändå
+    // kvar på kunden i Fortnox och rörs inte av integrationen.
+    logger.warn(`(kunde inte läsas: ${(err as Error).message.slice(0, 80)})`);
+  }
 
   logger.info("── Artiklar som ser ut som frakt ──");
   let page = 1;
