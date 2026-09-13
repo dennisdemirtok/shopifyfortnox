@@ -337,7 +337,10 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
     }
 
     if (!isAtLeast(mapping.state, "BOOKKEPT")) {
-      await bookkeepInvoice(invNr);
+      const cfg = await getStorefrontConfig(job.shopDomain);
+      // Bokför bara om det uttryckligen är påslaget — normalt sköter
+      // redovisningsansvarig bokföringen själv i Fortnox.
+      if (cfg.autoBookkeep) await bookkeepInvoice(invNr);
       mapping = await patchOrderMapping(mapping.id, { state: "BOOKKEPT" });
       await audit({
         shopDomain: job.shopDomain,
@@ -346,7 +349,9 @@ export async function handleOrderFulfilled(job: OrderJob): Promise<void> {
         entityId: job.orderGid,
         step: "invoice.bookkeep",
         status: "ok",
-        message: `Bokförd faktura ${invNr}`,
+        message: cfg.autoBookkeep
+          ? `Bokförd faktura ${invNr}`
+          : `Faktura ${invNr} skickad — bokförs manuellt i Fortnox`,
       });
     }
   } catch (err) {

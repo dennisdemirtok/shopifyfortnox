@@ -114,6 +114,9 @@ model StorefrontConfig {
   vatRegime         String   @default("inhemsk") // inhemsk | reverse-charge | export
   shippingArticleNr String? // Fortnox-artikelnr för frakt (egen fraktartikel)
   sendMethod        String   @default("email") // email | eprint
+  /// Ska integrationen bokföra fakturan i Fortnox? Default nej — normalt sköter
+  /// redovisningsansvarig bokföringen själv i Fortnox efter att fakturan skickats.
+  autoBookkeep      Boolean  @default(false)
   taggedB2bTag      String? // tagg-filter om b2bModel = tagged
   paymentTermsMap   Json? // Shopify payment terms-mall -> Fortnox TermsOfPayment
   accountMap        Json? // momsregim/scenario -> Fortnox försäljningskonto

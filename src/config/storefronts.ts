@@ -11,6 +11,7 @@ export interface ResolvedStorefront {
   vatRegime: string;
   shippingArticleNr?: string;
   sendMethod: "email" | "eprint";
+  autoBookkeep: boolean;
   taggedB2bTag?: string;
   paymentTermsMap: Record<string, string>;
   accountMap: Record<string, string | number>;
@@ -41,6 +42,7 @@ export async function getStorefrontConfig(
       vatRegime: row.vatRegime,
       shippingArticleNr: row.shippingArticleNr ?? undefined,
       sendMethod: (row.sendMethod as "email" | "eprint") ?? "email",
+      autoBookkeep: row.autoBookkeep,
       taggedB2bTag: row.taggedB2bTag ?? undefined,
       paymentTermsMap: asRecord(row.paymentTermsMap),
       accountMap: asAccountMap(row.accountMap),
@@ -54,6 +56,8 @@ export async function getStorefrontConfig(
     pricesIncludeVat: false, // B2B-priser normalt exkl. moms (spec §5) — verifiera per storefront
     vatRegime: "inhemsk",
     sendMethod: "email",
+    // Bokföring sköts normalt manuellt i Fortnox av redovisningsansvarig.
+    autoBookkeep: false,
     paymentTermsMap: {},
     accountMap: {},
   };

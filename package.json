@@ -24,7 +24,8 @@
     "import:customers": "tsx src/scripts/importFortnoxCustomers.ts",
     "invoice:consolidate": "tsx src/scripts/consolidateInvoices.ts",
     "provision:invoice-field": "tsx src/scripts/provisionInvoiceModeField.ts",
-    "fortnox:inspect": "tsx src/scripts/inspectFortnox.ts"
+    "fortnox:inspect": "tsx src/scripts/inspectFortnox.ts",
+    "configure:storefront": "tsx src/scripts/configureStorefront.ts"
   },
   "dependencies": {
     "@prisma/client": "^6.2.1",

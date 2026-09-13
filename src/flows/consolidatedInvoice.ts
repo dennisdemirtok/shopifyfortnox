@@ -176,7 +176,7 @@ export async function runConsolidation(
       if (config.sendMethod === "eprint") await eprintInvoice(invNr);
       else await emailInvoice(invNr);
 
-      await bookkeepInvoice(invNr);
+      if (config.autoBookkeep) await bookkeepInvoice(invNr);
 
       for (const row of rows) {
         await patchOrderMapping(row.id, {
