@@ -256,6 +256,20 @@ export async function listArticles(page = 1, limit = 500): Promise<ArticlesList>
   });
 }
 
+export interface FortnoxTermsOfPayment {
+  Code?: string;
+  Description?: string;
+}
+
+/** Betalningsvillkor som finns upplagda i Fortnox. */
+export async function listTermsOfPayments(): Promise<FortnoxTermsOfPayment[]> {
+  const data = await request<{ TermsOfPayments?: FortnoxTermsOfPayment[] }>({
+    method: "GET",
+    path: "/3/termsofpayments",
+  });
+  return data.TermsOfPayments ?? [];
+}
+
 /** Skapar en artikel i Fortnox (produktsynk Shopify → Fortnox). */
 export async function createArticle(payload: FortnoxArticle): Promise<FortnoxArticle> {
   const data = await request<{ Article: FortnoxArticle }>({
